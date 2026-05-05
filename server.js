@@ -47,7 +47,10 @@ app.use(cors({
 // 3. HTTP 请求日志
 app.use(httpLogger);
 
-// 4. Body parser（限制大小防止 DoS）
+// 4. i18n 中间件
+app.use(i18nextMiddleware.handle(i18n));
+
+// 5. Body parser（限制大小防止 DoS）
 app.use(express.json({ limit: '10kb' }));
 app.use(express.urlencoded({ extended: true, limit: '10kb' }));
 
@@ -59,9 +62,30 @@ const githubService = new GitHubService(process.env.GITHUB_TOKEN);
 const dataProcessor = new DataProcessor();
 const heatmapRenderer = new HeatmapRenderer();
 
+// 初始化数据库
+db.initialize().catch(err => {
+  console.error('[Server] Database initialization failed:', err.message);
+});
+
 // ============================================
 // API 路由（带验证和限流）
 // ============================================
+
+// 认证路由
+app.use('/api/auth', authRouter);
+
+// 导出路由
+app.use('/api/export', exportRouter);
+
+// 语言切换端点
+app.post('/api/language', (req, res) => {
+  const { lang } = req.body;
+  if (!['zh', 'en'].includes(lang)) {
+    return res.status(400).json({ success: false, error: 'Unsupported language' });
+  }
+  res.cookie('i18next', lang, { maxAge: 365 * 24 * 60 * 60 * 1000 });
+  res.json({ success: true, language: lang });
+});
 
 /**
  * API: 获取用户贡献数据
@@ -385,12 +409,14 @@ app.use(errorMonitor.expressErrorHandler());
 // ============================================
 // 启动服务器
 // ============================================
-app.listen(PORT, () => {
-  logger.info(`GitHub Contribution Heatmap Generator running on http://localhost:${PORT}`);
-  logger.info(`Health check: http://localhost:${PORT}/health`);
-  logger.info(`Security features enabled: Helmet, Rate Limiting, Input Validation`);
-  logger.info(`Logging system: Winston (files in logs/ directory)`);
-  logger.info(`Error monitoring: Active`);
-});
+if (require.main === module) {
+  app.listen(PORT, () => {
+    logger.info(`GitHub Contribution Heatmap Generator running on http://localhost:${PORT}`);
+    logger.info(`Health check: http://localhost:${PORT}/health`);
+    logger.info(`Security features enabled: Helmet, Rate Limiting, Input Validation`);
+    logger.info(`Logging system: Winston (files in logs/ directory)`);
+    logger.info(`Error monitoring: Active`);
+  });
+}
 
 module.exports = app;
