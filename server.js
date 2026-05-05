@@ -7,10 +7,19 @@ const GitHubService = require('./services/githubService');
 const DataProcessor = require('./services/dataProcessor');
 const HeatmapRenderer = require('./services/heatmapRenderer');
 const cache = require('./services/cacheService');
+const db = require('./services/databaseService');
 
 // 导入日志和错误监控
 const { logger, httpLogger } = require('./config/logger');
 const errorMonitor = require('./services/errorMonitor');
+
+// 导入国际化配置
+const i18n = require('./config/i18n');
+const i18nextMiddleware = require('i18next-http-middleware');
+
+// 导入路由
+const authRouter = require('./routes/auth');
+const exportRouter = require('./routes/export');
 
 // 导入安全中间件
 const securityHeaders = require('./middleware/security');
