@@ -6,4 +6,3 @@ logs/
 *.log
 coverage/
 data/*.db
-.env
